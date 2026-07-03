@@ -1,0 +1,41 @@
+# Entorno y secretos
+.env
+*.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Logs
+logs/
+*.log
+
+# Base de conocimiento RAG (PDFs propios)
+rag/knowledge_base/*.pdf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node (dashboard)
+dashboard/frontend/node_modules/
+dashboard/frontend/dist/
+dashboard/frontend/.env

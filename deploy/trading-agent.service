@@ -1,0 +1,34 @@
+[Unit]
+Description=Trading Agent (Binance + Telegram)
+Documentation=file:///opt/trading-agent/.claude/CLAUDE.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=trader
+Group=trader
+WorkingDirectory=/opt/trading-agent
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=/opt/trading-agent/.env
+ExecStart=/opt/trading-agent/venv/bin/python /opt/trading-agent/main.py
+
+# Auto-restart si crashea — clave para 24/7
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+# Logs van a journald (revisable con: journalctl -u trading-agent -f)
+StandardOutput=journal
+StandardError=journal
+
+# Hardening básico
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/trading-agent/logs
+
+[Install]
+WantedBy=multi-user.target

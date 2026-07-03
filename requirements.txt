@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────
+#  TRADING AGENT — Dependencias Python
+# ─────────────────────────────────────────────
+
+# ── Core ─────────────────────────────────────
+python-dotenv==1.0.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# ── Trading / Exchanges ───────────────────────
+python-binance==1.0.19
+ccxt==4.2.1                     # fallback multi-exchange
+
+# ── Async / WebSocket ────────────────────────
+websockets==12.0
+aiohttp==3.9.1
+
+# ── Telegram Bot ─────────────────────────────
+python-telegram-bot==20.7
+
+# ── Supabase / Database ───────────────────────
+supabase==2.7.4
+asyncpg==0.29.0
+
+# ── RAG / Embeddings ─────────────────────────
+anthropic==0.40.0
+openai==1.12.0                  # alternativa para embeddings
+numpy==1.26.4
+scikit-learn==1.4.0             # similitud coseno local
+
+# ── Data / Análisis ───────────────────────────
+pandas==2.2.0
+# pandas-ta se instala por separado con --no-deps (ver abajo)
+numpy==1.26.4
+
+# ── Backtesting ───────────────────────────────
+backtesting==0.3.3
+
+# ── API / Dashboard backend ───────────────────
+fastapi==0.109.0
+uvicorn==0.27.0
+websockets==12.0
+
+# ── Logging / Monitoreo ───────────────────────
+loguru==0.7.2
+
+# ── Testing ───────────────────────────────────
+pytest==8.0.0
+pytest-asyncio==0.23.5
+pytest-cov==4.1.0
+
+# ── Utilidades ────────────────────────────────
+python-dateutil==2.8.2
+pytz==2024.1
+schedule==1.2.1
+httpx>=0.25.2,<0.26.0
