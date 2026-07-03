@@ -3,6 +3,10 @@
 *.env
 .env.*
 !.env.example
+*BACKUP*.txt
+*backup*.txt
+*keys*.txt
+*credentials*.txt
 
 # Python
 __pycache__/

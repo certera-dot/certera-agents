@@ -121,9 +121,13 @@ class PaperTradingManager:
 
     async def _get_price(self, asset: str, connectors: dict) -> float | None:
         try:
-            if "/" in asset and "forex" in connectors:
+            if "/" in asset and "forex" in connectors and connectors["forex"].is_connected():
                 return await connectors["forex"].get_price(asset)
-            if "binance" in connectors:
+            # Stocks de Alpaca: símbolos sin "/" y sin sufijos como USDT
+            if ("alpaca" in connectors and connectors["alpaca"].is_connected()
+                    and not any(asset.endswith(s) for s in ("USDT", "BTC", "ETH", "BNB"))):
+                return await connectors["alpaca"].get_price(asset)
+            if "binance" in connectors and connectors["binance"].is_connected():
                 return await connectors["binance"].get_price(asset)
         except Exception as e:
             logger.error(f"_get_price error en {asset}: {e}")
