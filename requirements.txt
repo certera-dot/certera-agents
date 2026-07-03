@@ -10,6 +10,7 @@ pydantic-settings==2.1.0
 # ── Trading / Exchanges ───────────────────────
 python-binance==1.0.19
 ccxt==4.2.1                     # fallback multi-exchange
+yfinance>=0.2.36                # datos forex gratuitos sin API key
 
 # ── Async / WebSocket ────────────────────────
 websockets==12.0
