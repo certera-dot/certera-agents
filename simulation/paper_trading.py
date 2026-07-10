@@ -8,6 +8,7 @@ demasiado tiempo sin definirse (BREAKEVEN por timeout). Sin trades cerrados
 con resultado real no hay nada que learning_engine pueda aprender.
 """
 from datetime import datetime, timezone
+from dateutil import parser as dateutil_parser
 from loguru import logger
 
 
@@ -116,7 +117,9 @@ class PaperTradingManager:
         opened = trade.get("timestamp_open")
         if not opened:
             return None
-        opened_dt = datetime.fromisoformat(opened.replace("Z", "+00:00"))
+        opened_dt = dateutil_parser.parse(str(opened))
+        if opened_dt.tzinfo is None:
+            opened_dt = opened_dt.replace(tzinfo=timezone.utc)
         return (datetime.now(timezone.utc) - opened_dt).total_seconds() / 3600
 
     async def _get_price(self, asset: str, connectors: dict) -> float | None:
