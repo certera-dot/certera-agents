@@ -177,8 +177,8 @@ class TradingEngine:
             },
         })
 
-        analysis = await self.learning_engine.analyze_signal(signal.to_dict())
         await self.bot.send_signal_alert(signal.to_dict(), validation)
+        analysis = await self.learning_engine.analyze_signal(signal.to_dict())
         if analysis and "offline" not in analysis.lower():
             await self.bot.send_message(f"🤖 <i>{analysis}</i>")
 

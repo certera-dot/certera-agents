@@ -28,8 +28,8 @@ class LearningEngine:
             return
 
         try:
-            from anthropic import Anthropic
-            self.client = Anthropic(api_key=api_key)
+            from anthropic import AsyncAnthropic
+            self.client = AsyncAnthropic(api_key=api_key)
             logger.info("LearningEngine OK (Claude activo)")
         except ImportError:
             logger.warning("LearningEngine: paquete anthropic no instalado")
@@ -54,7 +54,7 @@ class LearningEngine:
             f"¿La señal tiene sentido técnico? ¿Qué riesgos ves?"
         )
         try:
-            msg = self.client.messages.create(
+            msg = await self.client.messages.create(
                 model=self.model,
                 max_tokens=200,
                 messages=[{"role": "user", "content": prompt}],
@@ -173,7 +173,7 @@ class LearningEngine:
             prompt = (f"Datos de trading: {summary}\n"
                       f"Dame en 2 líneas el patrón más relevante y qué ajustar.")
             try:
-                msg = self.client.messages.create(
+                msg = await self.client.messages.create(
                     model=self.model, max_tokens=150,
                     messages=[{"role": "user", "content": prompt}],
                 )
