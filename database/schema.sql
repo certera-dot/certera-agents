@@ -116,6 +116,21 @@ CREATE TABLE IF NOT EXISTS agent_events (
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ── Decision Log (Tech Lead Agent — Fase 1 shadow mode) ─────
+CREATE TABLE IF NOT EXISTS decision_log (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  timestamp         TIMESTAMPTZ DEFAULT NOW(),
+  setup             TEXT NOT NULL,
+  asset             TEXT,
+  signal_context    JSONB,
+  decision          TEXT NOT NULL CHECK (decision IN ('EXECUTE','REDUCE_SIZE','PAUSE')),
+  justification     TEXT,
+  confidence        FLOAT,
+  shadow_mode       BOOLEAN DEFAULT TRUE,
+  outcome           TEXT CHECK (outcome IN ('WIN','LOSS','BREAKEVEN') OR outcome IS NULL),
+  outcome_timestamp TIMESTAMPTZ
+);
+
 -- ── Índices ───────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_trades_asset         ON trades(asset);
 CREATE INDEX IF NOT EXISTS idx_trades_methodology   ON trades(methodology);
@@ -123,6 +138,8 @@ CREATE INDEX IF NOT EXISTS idx_trades_result        ON trades(result);
 CREATE INDEX IF NOT EXISTS idx_trades_mode          ON trades(mode);
 CREATE INDEX IF NOT EXISTS idx_signals_asset        ON signals(asset);
 CREATE INDEX IF NOT EXISTS idx_pattern_key          ON pattern_weights(pattern_key);
+CREATE INDEX IF NOT EXISTS idx_decision_log_setup   ON decision_log(setup);
+CREATE INDEX IF NOT EXISTS idx_decision_log_ts      ON decision_log(timestamp DESC);
 
 -- Índice vectorial para RAG
 CREATE INDEX IF NOT EXISTS idx_rag_embedding

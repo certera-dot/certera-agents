@@ -129,6 +129,26 @@ class SupabaseClient:
             logger.error(f"Supabase count_closed_trades: {e}")
             return 0
 
+    # ── Decision Log: historial de decisiones del Tech Lead Agent ───────
+
+    async def log_decision(self, decision: dict) -> dict | None:
+        return await self._post("decision_log", decision)
+
+    async def get_decision_log(self, setup: str, limit: int = 5) -> list:
+        return await self._get("decision_log", {
+            "select": "*",
+            "setup":  f"eq.{setup}",
+            "order":  "timestamp.desc",
+            "limit":  str(limit),
+        })
+
+    async def update_decision_outcome(self, decision_id: str, outcome: str) -> None:
+        await self._patch(
+            "decision_log",
+            {"id": f"eq.{decision_id}"},
+            {"outcome": outcome, "outcome_timestamp": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()},
+        )
+
     async def get_trades_by_methodology(self, methodology: str, limit: int = 500) -> list:
         """Trades cerrados de una metodología, más recientes primero —
         usado por update_pattern_weights para calcular win rate con decay."""

@@ -37,12 +37,13 @@ class TelegramBot:
         logger.info("TelegramBot inicializado OK")
 
     def _register_commands(self):
-        self.app.add_handler(CommandHandler("start",  self._cmd_start))
-        self.app.add_handler(CommandHandler("status", self._cmd_status))
-        self.app.add_handler(CommandHandler("pause",  self._cmd_pause))
-        self.app.add_handler(CommandHandler("resume", self._cmd_resume))
-        self.app.add_handler(CommandHandler("precio", self._cmd_precio))
-        self.app.add_handler(CommandHandler("help",   self._cmd_help))
+        self.app.add_handler(CommandHandler("start",    self._cmd_start))
+        self.app.add_handler(CommandHandler("status",   self._cmd_status))
+        self.app.add_handler(CommandHandler("pause",    self._cmd_pause))
+        self.app.add_handler(CommandHandler("resume",   self._cmd_resume))
+        self.app.add_handler(CommandHandler("precio",   self._cmd_precio))
+        self.app.add_handler(CommandHandler("override", self._cmd_override))
+        self.app.add_handler(CommandHandler("help",     self._cmd_help))
 
     async def send_message(self, text: str) -> None:
         if not self.app or not self.chat_id:
@@ -54,15 +55,15 @@ class TelegramBot:
         except Exception as e:
             logger.error(f"Telegram send_message: {e}")
 
-    async def send_signal_alert(self, signal: dict, validation) -> None:
-        status     = "✅ APROBADA" if validation.approved else f"❌ RECHAZADA ({validation.reason})"
-        stype      = signal.get("signal_type", "?")
-        asset      = signal.get("asset", "?")
+    async def send_signal_alert(self, signal: dict, validation,
+                                shadow_decision: dict | None = None) -> None:
+        status      = "✅ APROBADA" if validation.approved else f"❌ RECHAZADA ({validation.reason})"
+        stype       = signal.get("signal_type", "?")
+        asset       = signal.get("asset", "?")
         methodology = signal.get("methodology", "?")
         confidence  = signal.get("confidence", 0)
         timeframe   = signal.get("timeframe", "?")
 
-        # Icono según metodología
         method_icons = {
             "ema_cross":     "📈",
             "rsi_oversold":  "🟢",
@@ -70,12 +71,26 @@ class TelegramBot:
         }
         icon = method_icons.get(methodology, "📊")
 
-        # Confidence en barras visuales
-        bars = int(confidence * 10)
+        bars     = int(confidence * 10)
         conf_bar = "▓" * bars + "░" * (10 - bars)
 
-        tps = signal.get("take_profit", [])
+        tps     = signal.get("take_profit", [])
         tp_text = " / ".join(f"<code>{tp}</code>" for tp in tps) if tps else "N/A"
+
+        # Bloque Tech Lead (shadow mode)
+        tl_block = ""
+        if shadow_decision:
+            dec   = shadow_decision.get("decision", "?")
+            just  = shadow_decision.get("justification", "")
+            conf  = shadow_decision.get("confidence", 0)
+            losses = shadow_decision.get("consecutive_losses", 0)
+            dec_icons = {"EXECUTE": "🟢", "REDUCE_SIZE": "🟡", "PAUSE": "🔴"}
+            tl_block = (
+                f"\n───────────────\n"
+                f"🤖 <b>Tech Lead</b> [shadow]: {dec_icons.get(dec,'•')} <b>{dec}</b> ({conf:.0%})\n"
+                f"<i>{just}</i>\n"
+                f"Losses consecutivos: <code>{losses}</code>"
+            )
 
         text = (
             f"{icon} <b>SEÑAL {stype} — {asset}</b>\n"
@@ -87,6 +102,7 @@ class TelegramBot:
             f"TPs:   {tp_text}\n"
             f"───────────────\n"
             f"Estado: {status}"
+            f"{tl_block}"
         )
         await self.send_message(text)
 
@@ -161,5 +177,45 @@ class TelegramBot:
         else:
             await update.message.reply_text("Connector Binance no disponible.")
 
+    async def _cmd_override(self, update: "Update", ctx: "ContextTypes.DEFAULT_TYPE"):
+        """
+        /override ema_cross — fuerza EXECUTE en el siguiente scan de ese setup,
+        ignorando la recomendación del Tech Lead Agent.
+        Fase 1 (shadow): registra el override en log pero no cambia la ejecución todavía.
+        Fase 2: tomará control real sobre la decisión del Tech Lead.
+        """
+        if not ctx.args:
+            await update.message.reply_text(
+                "Uso: <code>/override &lt;setup&gt;</code>\n"
+                "Setups disponibles: <code>ema_cross</code>, <code>rsi_oversold</code>, "
+                "<code>rsi_overbought</code>\n\n"
+                "⚠️ En Fase 1 (shadow mode) el override queda registrado en el log "
+                "pero no altera la ejecución — el Tech Lead Agent aún no tiene control real.",
+                parse_mode="HTML",
+            )
+            return
+
+        setup = ctx.args[0].lower()
+        if self._engine_ref and hasattr(self._engine_ref, "_consecutive_losses"):
+            self._engine_ref._consecutive_losses[setup] = 0
+            await update.message.reply_text(
+                f"✅ Override registrado para <code>{setup}</code>.\n"
+                f"Pérdidas consecutivas reseteadas a 0.\n\n"
+                f"ℹ️ <i>Fase 1 shadow mode — el Tech Lead Agent seguirá evaluando "
+                f"pero el reset afectará su próxima decisión.</i>",
+                parse_mode="HTML",
+            )
+        else:
+            await update.message.reply_text("Engine no disponible.")
+
     async def _cmd_help(self, update: "Update", ctx: "ContextTypes.DEFAULT_TYPE"):
-        await self._cmd_start(update, ctx)
+        await update.message.reply_text(
+            "🤖 <b>Trading Agent — Comandos</b>\n\n"
+            "/status — Estado del agente\n"
+            "/precio BTC — Precio actual\n"
+            "/pause — Pausar operaciones\n"
+            "/resume — Reanudar operaciones\n"
+            "/override &lt;setup&gt; — Override Tech Lead (shadow)\n"
+            "/help — Ayuda",
+            parse_mode="HTML",
+        )

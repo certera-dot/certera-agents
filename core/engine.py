@@ -15,6 +15,7 @@ from loguru import logger
 from core.risk_manager import RiskManager
 from core.learning_engine import LearningEngine
 from core.signal_detector import SignalDetector
+from core.tech_lead_agent import TechLeadAgent
 from execution.modes import OperationMode
 from simulation.paper_trading import PaperTradingManager
 
@@ -38,6 +39,9 @@ class TradingEngine:
 
         self.mode       = OperationMode(os.getenv("OPERATION_MODE", "manual"))
         self.simulation = os.getenv("SIMULATION_MODE", "true").lower() == "true"
+
+        self.tech_lead          = TechLeadAgent(db=db)
+        self._consecutive_losses: dict = {}  # {setup: int} — actualizado tras cada trade cerrado
 
         # Backref en el bot para que los comandos /status, /pause, etc. funcionen
         if hasattr(telegram_bot, "_engine_ref"):
@@ -177,7 +181,15 @@ class TradingEngine:
             },
         })
 
-        await self.bot.send_signal_alert(signal.to_dict(), validation)
+        # Tech Lead Agent: evalúa en shadow mode (no bloquea, solo informa)
+        consecutive_losses = self._consecutive_losses.get(signal.methodology, 0)
+        shadow = await self.tech_lead.evaluate(
+            signal=signal.to_dict(),
+            consecutive_losses=consecutive_losses,
+            recent_trades=self.learning_engine._trade_log,
+        )
+
+        await self.bot.send_signal_alert(signal.to_dict(), validation, shadow_decision=shadow)
         analysis = await self.learning_engine.analyze_signal(signal.to_dict())
         if analysis and "offline" not in analysis.lower():
             await self.bot.send_message(f"🤖 <i>{analysis}</i>")
@@ -199,6 +211,13 @@ class TradingEngine:
             self.risk_manager.register_result(trade["result"], trade.get("pnl_pct", 0))
             await self.learning_engine.learn_from_trade(trade)
             await self._notify_trade_closed(trade)
+
+            # Actualizar contador de pérdidas consecutivas por setup
+            setup = trade.get("methodology", "unknown")
+            if trade["result"] == "WIN":
+                self._consecutive_losses[setup] = 0
+            elif trade["result"] == "LOSS":
+                self._consecutive_losses[setup] = self._consecutive_losses.get(setup, 0) + 1
 
         if not closed:
             return
